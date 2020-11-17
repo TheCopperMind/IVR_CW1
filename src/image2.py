@@ -10,6 +10,59 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 
+# In this method you can focus on detecting the centre of the red circle
+def detect_red(image):
+    # Isolate the blue colour in the image as a binary image
+    mask = cv2.inRange(image, (0, 0, 100), (0, 0, 255))
+    # This applies a dilate that makes the binary region larger (the more iterations the larger it becomes)
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    # Obtain the moments of the binary image
+    M = cv2.moments(mask)
+    # Calculate pixel coordinates for the centre of the blob
+    cx = int(M['m10'] / M['m00'])
+    cy = int(M['m01'] / M['m00'])
+    return np.array([cx, cy])
+ 
+
+# Detecting the centre of the green circle
+def detect_green(image):
+    mask = cv2.inRange(image, (0, 100, 0), (0, 255, 0))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    M = cv2.moments(mask)
+    cx = int(M['m10'] / M['m00'])
+    cy = int(M['m01'] / M['m00'])
+    return np.array([cx, cy])
+
+# Detecting the centre of the blue circle
+def detect_blue(image):
+    mask = cv2.inRange(image, (100, 0, 0), (255, 0, 0))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    M = cv2.moments(mask)
+    cx = int(M['m10'] / M['m00'])     
+    cy = int(M['m01'] / M['m00'])
+    return np.array([cx, cy])
+
+# Detecting the centre of the yellow circle
+def detect_yellow(image):
+    mask = cv2.inRange(image, (0, 100, 100), (0, 255, 255))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    M = cv2.moments(mask)
+    cx = int(M['m10'] / M['m00'])     
+    cy = int(M['m01'] / M['m00'])
+    return np.array([cx, cy])
+    
+# Calculate the conversion from pixel to meter
+def pixel2meter(image):
+    # Obtain the centre of each coloured blob
+    circle1Pos = detect_blue(image)
+    circle2Pos = detect_green(image)
+    # find the distance between two circles
+    dist = np.sum((circle1Pos - circle2Pos)**2)
+    return 3 / np.sqrt(dist)
 
 class image_converter:
 
@@ -34,8 +87,6 @@ class image_converter:
       print(e)
     # Uncomment if you want to save the image
     #cv2.imwrite('image_copy.png', cv_image)
-    im2=cv2.imshow('window2', self.cv_image2)
-    cv2.waitKey(1)
 
     # Publish the results
     try: 
@@ -55,5 +106,3 @@ def main(args):
 # run the code if the node is called
 if __name__ == '__main__':
     main(sys.argv)
-
-
