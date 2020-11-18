@@ -19,10 +19,13 @@ def detect_red(image):
     mask = cv2.dilate(mask, kernel, iterations=3)
     # Obtain the moments of the binary image
     M = cv2.moments(mask)
-    # Calculate pixel coordinates for the centre of the blob
-    cx = int(M['m10'] / M['m00'])
-    cy = int(M['m01'] / M['m00'])
-    return np.array([cx, cy])
+    if M['m00'] == 0:
+    	return np.array([0,0])
+    else:
+    	# Calculate pixel coordinates for the centre of the blob
+    	cx = int(M['m10'] / M['m00'])
+    	cy = int(M['m01'] / M['m00'])
+    	return np.array([cx, cy])
  
 
 # Detecting the centre of the green circle
@@ -31,9 +34,13 @@ def detect_green(image):
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.dilate(mask, kernel, iterations=3)
     M = cv2.moments(mask)
-    cx = int(M['m10'] / M['m00'])
-    cy = int(M['m01'] / M['m00'])
-    return np.array([cx, cy])
+    if M['m00'] == 0:
+    	return np.array([0,0])
+    else:
+    	# Calculate pixel coordinates for the centre of the blob
+    	cx = int(M['m10'] / M['m00'])
+    	cy = int(M['m01'] / M['m00'])
+    	return np.array([cx, cy])
 
 # Detecting the centre of the blue circle
 def detect_blue(image):
@@ -41,9 +48,13 @@ def detect_blue(image):
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.dilate(mask, kernel, iterations=3)
     M = cv2.moments(mask)
-    cx = int(M['m10'] / M['m00'])     
-    cy = int(M['m01'] / M['m00'])
-    return np.array([cx, cy])
+    if M['m00'] == 0:
+    	return np.array([0,0])
+    else:
+    	# Calculate pixel coordinates for the centre of the blob
+    	cx = int(M['m10'] / M['m00'])
+    	cy = int(M['m01'] / M['m00'])
+    	return np.array([cx, cy])
 
 # Detecting the centre of the yellow circle
 def detect_yellow(image):
@@ -51,18 +62,22 @@ def detect_yellow(image):
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.dilate(mask, kernel, iterations=3)
     M = cv2.moments(mask)
-    cx = int(M['m10'] / M['m00'])     
-    cy = int(M['m01'] / M['m00'])
-    return np.array([cx, cy])
+    if M['m00'] == 0:
+    	return np.array([0,0])
+    else:
+    	# Calculate pixel coordinates for the centre of the blob
+    	cx = int(M['m10'] / M['m00'])
+    	cy = int(M['m01'] / M['m00'])
+    	return np.array([cx, cy])
     
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):
     # Obtain the centre of each coloured blob
     circle1Pos = detect_blue(image)
-    circle2Pos = detect_green(image)
+    circle2Pos = detect_yellow(image)
     # find the distance between two circles
     dist = np.sum((circle1Pos - circle2Pos)**2)
-    return 3 / np.sqrt(dist)
+    return 2.5 / np.sqrt(dist)
 
 class image_converter:
 
@@ -101,7 +116,6 @@ def main(args):
     rospy.spin()
   except KeyboardInterrupt:
     print("Shutting down")
-  cv2.destroyAllWindows()
 
 # run the code if the node is called
 if __name__ == '__main__':
