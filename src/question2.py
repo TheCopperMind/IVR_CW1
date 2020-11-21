@@ -41,7 +41,7 @@ class question2:
 
 
 	def projection(self, link_vector, normal_vector):
-		return(link_vector - np.dot(link_vector, normal_vector)/np.norm(normal_vector**2)*normal_vector)
+		return(link_vector - (np.dot(link_vector, normal_vector)/np.norm(normal_vector)**2)*normal_vector)
 	
 	def vector_angle(self, u, v):
 		return(np.acos(np.dot(u, v) / (np.norm(u) * np.norm(v))))
@@ -54,6 +54,11 @@ class question2:
 		xz_angle = self.vector_angle(proj_xz, link_vector)
 		yz_angle = self.vector_angle(proj_yz, link_vector)
 		xy_angle = self.vector_angle(proj_xy, link_vector)
+
+		x_rotation = self.vector_angle(proj_yz, [0,0,1])
+		y_rotation = self.vector_angle(proj_yz, link_vector)
+
+		return(np.array([proj_xz, proj_yz, proj_xy]))
 	
 	def dh_matrix(self, d, theta, alpha, r):
 		return(np.array([   [np.cos(theta)  , -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha)     , r*np.cos(theta)],
