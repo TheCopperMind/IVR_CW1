@@ -10,6 +10,8 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 
+#fix problem when m00 = 0, maybe in other file?
+
 # In this method you can focus on detecting the centre of the red circle
 def detect_red(image):
     # Isolate the blue colour in the image as a binary image
@@ -70,6 +72,35 @@ def detect_yellow(image):
     	cx = int(M['m10'] / M['m00'])
     	cy = int(M['m01'] / M['m00'])
     	return np.array([cx, cy])
+    	
+def detect_target(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, (10,100,20), (25,255,255))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    
+    ret,thresh = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
+    mask[thresh == 0] = 255
+    mask = cv2.bitwise_not(thresh)
+    
+    cv2.imshow("Name",mask)
+    cv2.waitKey(0)
+   
+    # Apply Hough transform on the blurred image. 
+    detected_circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT,1, 20, param1 = 50, param2 = 30, minRadius = 1, maxRadius = 40) 
+  
+    # Draw circles that are detected. 
+    if detected_circles is not None: 
+  
+        # Convert the circle parameters a, b and r to integers. 
+        detected_circles = np.uint16(np.around(detected_circles)) 
+  
+        for pt in detected_circles[0, :]: 
+            a, b, r = pt[0], pt[1], pt[2] 
+     
+        return detected_circles[0] 
+    else:
+        return [0,0]
 
 
 # Calculate the conversion from pixel to meter
