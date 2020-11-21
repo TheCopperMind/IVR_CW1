@@ -41,36 +41,6 @@ class question2:
 		#self.error_d = np.array([0.0,0.0], dtype='float64') 
 
 
-	def projection(self, link_vector, normal_vector):
-		print(link_vector)
-		print(normal_vector.shape)
-		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
-	
-	def vector_angle(self, u, v):
-		return(np.arccos(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))))
-
-	def plane_angles(self, link_vector):
-		proj_xz = self.projection(link_vector, np.array([0,1,0]))
-		proj_yz = self.projection(link_vector, np.array([1,0,0]))
-		proj_xy = self.projection(link_vector, np.array([0,0,1]))
-
-		#xz_angle = self.vector_angle(proj_xz, link_vector)
-		#yz_angle = self.vector_angle(proj_yz, link_vector)
-		#xy_angle = self.vector_angle(proj_xy, link_vector)
-		x_rotation = 0
-		y_rotation =0
-		#positive x rotation
-		if link_vector[1]<0:
-			x_rotation = self.vector_angle(proj_yz, [0,0,1])
-		#negative x rotation
-		else:
-			x_rotation = -self.vector_angle(proj_yz, [0,0,1])
-
-		if link_vector[0]>0:
-			y_rotation = self.vector_angle(proj_yz, link_vector)
-		else:
-			y_rotation = -self.vector_angle(proj_yz, link_vector)
-		return(x_rotation, y_rotation)
 	
 	def dh_matrix(self, d, theta, alpha, r):
 		return(np.array([   [np.cos(theta)  , -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha)     , r*np.cos(theta)],
@@ -202,10 +172,51 @@ class question2:
 	#np.deg2rad([-90,90,180,0])
 	#[0,0,3.5,3]
 	#np.deg2rad([-90,-90,-90,0])
+	def projection(self, link_vector, normal_vector):
+		print(link_vector)
+		print(normal_vector.shape)
+		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
+	
+	#def vector_angle(self, u, v):
+	#	return(np.arccos(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))))
+
+	def vector_angle(self, v1, v2):
+		v1_u = self.unit_vector(v1)
+		v2_u = self.unit_vector(v2)
+		return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+		
+	def unit_vector(self, vector):
+		return(vector / np.linalg.norm(vector))
+
+	def plane_angles(self, link_vector):
+		proj_xz = self.projection(link_vector, np.array([0,1,0]))
+		proj_yz = self.projection(link_vector, np.array([1,0,0]))
+		proj_xy = self.projection(link_vector, np.array([0,0,1]))
+
+		#xz_angle = self.vector_angle(proj_xz, link_vector)
+		#yz_angle = self.vector_angle(proj_yz, link_vector)
+		#xy_angle = self.vector_angle(proj_xy, link_vector)
+		x_rotation = 0
+		y_rotation =0
+		print(proj_yz)
+		#positive x rotation
+		if link_vector[1]<0:
+			x_rotation = self.vector_angle(proj_yz, [0,0,1])
+		#negative x rotation
+		else:
+			x_rotation = -self.vector_angle(proj_yz, [0,0,1])
+
+		if link_vector[0]>0:
+			y_rotation = self.vector_angle(proj_yz, link_vector)
+		else:
+			y_rotation = -self.vector_angle(proj_yz, link_vector)
+		return(x_rotation, y_rotation)
+
 def main():
 	ic = question2()
 	#define symbols for all links
-	print(ic.plane_angles(np.array([2,0.8,2.3])))
+	print(ic.plane_angles(np.array([0.06,-4.22,-2.64])))
 		
 	
 	
