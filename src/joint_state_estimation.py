@@ -21,9 +21,9 @@ class angle_estimator:
 	def __init__(self):
 		rospy.init_node('angle_estimator', anonymous=True)
 
-		self.robot_joint2est_pub = rospy.Publisher("/robot/joint2_position_estimator/command", Float64, queue_size=10)
-		self.robot_joint3est_pub = rospy.Publisher("/robot/joint3_position_estimator/command", Float64, queue_size=10)
-		self.robot_joint4est_pub = rospy.Publisher("/robot/joint4_position_estimator/command", Float64, queue_size=10)
+		self.robot_joint2_estimated_pub = rospy.Publisher("/robot/joint2_position_estimator/command", Float64, queue_size=10)
+		self.robot_joint3_estimated_pub = rospy.Publisher("/robot/joint3_position_estimator/command", Float64, queue_size=10)
+		self.robot_joint4_estimated_pub = rospy.Publisher("/robot/joint4_position_estimator/command", Float64, queue_size=10)
 
 		self.image_sub1 = message_filters.Subscriber("/camera1/robot/image_raw", Image)
 		self.image_sub2 = message_filters.Subscriber("/camera2/robot/image_raw", Image)
@@ -68,15 +68,29 @@ class angle_estimator:
 		xyz = np.array([greenXZ[0], greenYZ[0], (greenYZ[1]+greenXZ[1])/2])
 		return xyz
 
-	def dotproduct(self, v1, v2):
-		return np.sum(v1*v2)
+	def projection(self, link_vector, normal_vector):
+		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
 
 	def length(self, v):
-		return np.sqrt(self.dotproduct(v, v))
+		return np.sqrt(np.dot(v, v))
 
-	def anglebetween(self, v1, v2):
-		return np.arccos(np.sum(v1*v2) / (self.length(v1) * self.length(v2)))
+	def vector_angle(self, u, v):
+		return(np.arccos(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))))
 
+	def plane_angles(self, link_vector):
+		proj_xz = self.projection(link_vector, np.array([0,1,0]))
+		proj_yz = self.projection(link_vector, np.array([1,0,0]))
+		proj_xy = self.projection(link_vector, np.array([0,0,1]))
+
+		xz_angle = self.vector_angle(proj_xz, link_vector)
+		yz_angle = self.vector_angle(proj_yz, link_vector)
+		xy_angle = self.vector_angle(proj_xy, link_vector)
+
+		x_rotation = self.vector_angle(proj_yz, [0,0,1])
+		y_rotation = self.vector_angle(proj_yz, link_vector)
+
+		return(x_rotation, y_rotation)
+		
 	def jointangles(self, img1, img2):
 		yellow = self.detect3dyellow(img1, img2)
 		blue = self.detect3dblue(img1, img2)
@@ -87,18 +101,22 @@ class angle_estimator:
 		vectBG = green - blue
 		vectGR = red - green
 		
+		joint2and3 = self.plane_angles(vectBG)
+		
+		angles = self.plane_angles(vectBG)
 		vectBGcm1 = np.array([vectBG[1],vectBG[2]])
-		joint_2 = self.anglebetween(vectBG,np.array([0,0,-1]))
-		if(vectBG[1]>0):
-			joint_2 = (-1)*joint_2
+		#joint_2 = self.vector_angle(vectBG,np.array([0,0,-1]))
+		#joint_2 = angles[0]
+		#if(vectBG[1]>0):
+			#joint_2 = (-1)*joint_2
 			
-		joint_3 = self.anglebetween(vectGR, np.array([-1,0,0]))
+		#joint_3 = self.vector_angle(vectGR, np.array([-1,0,0]))
 
-		joint_4 = np.pi - self.anglebetween(vectBG, vectGR)
-		if(red[0]>0):
-			joint_4 = -joint_4
+		#joint_4 = np.pi - self.vector_angle(vectBG, vectGR)
+		#if(red[0]>0):
+			#joint_4 = -joint_4
 
-		return np.array([joint_2, joint_3, joint_4])
+		return np.array([joint2and3[0], joint2and3[1]])
 
 	def callback(self, data1, data2):
 		try:
@@ -114,9 +132,9 @@ class angle_estimator:
 		print(jointsData)
 
 		try:
-			self.robot_joint2est_pub.publish(self.joints.data[0])
-			self.robot_joint3est_pub.publish(self.joints.data[1])
-			self.robot_joint4est_pub.publish(self.joints.data[2])
+			self.robot_joint2_estimated_pub.publish(self.joints.data[0])
+			self.robot_joint3_estimated_pub.publish(self.joints.data[1])
+			#self.robot_joint4_estimated_pub.publish(self.joints.data[2])
 			
 		except CvBridgeError as e:
 			print(e)
