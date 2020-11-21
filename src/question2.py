@@ -58,7 +58,7 @@ class question2:
 		x_rotation = self.vector_angle(proj_yz, [0,0,1])
 		y_rotation = self.vector_angle(proj_yz, link_vector)
 
-		return(np.array([proj_xz, proj_yz, proj_xy]))
+		return(x_rotation, y_rotation)
 	
 	def dh_matrix(self, d, theta, alpha, r):
 		return(np.array([   [np.cos(theta)  , -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha)     , r*np.cos(theta)],
