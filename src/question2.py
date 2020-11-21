@@ -11,53 +11,65 @@ import sympy
 class question2:
 
 	def __init__(self):
+		self.time =0
 		# initialize the node named image_processing
-		rospy.init_node('image_processing', anonymous=True)
+		#rospy.init_node('image_processing', anonymous=True)
 		# initialize a publisher to send messages to a topic named image_topic
-		self.image_pub = rospy.Publisher("image_topic",Image, queue_size = 1)
+		#self.image_pub = rospy.Publisher("image_topic",Image, queue_size = 1)
 		# initialize a publisher to send joints' angular position to a topic called joints_pos
-		self.joints_pub = rospy.Publisher("joints_pos",Float64MultiArray, queue_size=10)
+		#self.joints_pub = rospy.Publisher("joints_pos",Float64MultiArray, queue_size=10)
 		# initialize a publisher to send robot end-effector position
-		self.end_effector_pub = rospy.Publisher("end_effector_prediction",Float64MultiArray, queue_size=10)
+		#self.end_effector_pub = rospy.Publisher("end_effector_prediction",Float64MultiArray, queue_size=10)
 		# initialize a publisher to send desired trajectory
-		self.trajectory_pub = rospy.Publisher("trajectory",Float64MultiArray, queue_size=10)
+		#self.trajectory_pub = rospy.Publisher("trajectory",Float64MultiArray, queue_size=10)
 		# initialize a publisher to send joints' angular position to the robot
-		self.robot_joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
-		self.robot_joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
-		self.robot_joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
-		self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
+		#self.robot_joint1_pub = rospy.Publisher("/robot/joint1_position_controller/command", Float64, queue_size=10)
+		#self.robot_joint2_pub = rospy.Publisher("/robot/joint2_position_controller/command", Float64, queue_size=10)
+		#self.robot_joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
+		#self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 		# initialize the bridge between openCV and ROS
-		self.bridge = CvBridge()
+		#self.bridge = CvBridge()
 		# initialize a subscriber to recieve messages rom a topic named /robot/camera1/image_raw and use callback function to recieve data
-		self.image_sub = rospy.Subscriber("/robot/camera1/image_raw",Image,self.callback)
+		#self.image_sub = rospy.Subscriber("/robot/camera1/image_raw",Image,self.callback)
 		# record the begining time
-		self.time_trajectory = rospy.get_time()
+		#self.time_trajectory = rospy.get_time()
 		# initialize errors
-		self.time_previous_step = np.array([rospy.get_time()], dtype='float64')     
-		self.time_previous_step2 = np.array([rospy.get_time()], dtype='float64')   
+		#self.time_previous_step = np.array([rospy.get_time()], dtype='float64')     
+		#self.time_previous_step2 = np.array([rospy.get_time()], dtype='float64')   
 		# initialize error and derivative of error for trajectory tracking  
-		self.error = np.array([0.0,0.0], dtype='float64')  
-		self.error_d = np.array([0.0,0.0], dtype='float64') 
+		#self.error = np.array([0.0,0.0], dtype='float64')  
+		#self.error_d = np.array([0.0,0.0], dtype='float64') 
 
 
 	def projection(self, link_vector, normal_vector):
-		return(link_vector - (np.dot(link_vector, normal_vector)/np.norm(normal_vector)**2)*normal_vector)
+		print(link_vector)
+		print(normal_vector.shape)
+		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
 	
 	def vector_angle(self, u, v):
-		return(np.acos(np.dot(u, v) / (np.norm(u) * np.norm(v))))
+		return(np.arccos(np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))))
 
 	def plane_angles(self, link_vector):
 		proj_xz = self.projection(link_vector, np.array([0,1,0]))
 		proj_yz = self.projection(link_vector, np.array([1,0,0]))
 		proj_xy = self.projection(link_vector, np.array([0,0,1]))
 
-		xz_angle = self.vector_angle(proj_xz, link_vector)
-		yz_angle = self.vector_angle(proj_yz, link_vector)
-		xy_angle = self.vector_angle(proj_xy, link_vector)
+		#xz_angle = self.vector_angle(proj_xz, link_vector)
+		#yz_angle = self.vector_angle(proj_yz, link_vector)
+		#xy_angle = self.vector_angle(proj_xy, link_vector)
+		x_rotation = 0
+		y_rotation =0
+		#positive x rotation
+		if link_vector[1]<0:
+			x_rotation = self.vector_angle(proj_yz, [0,0,1])
+		#negative x rotation
+		else:
+			x_rotation = -self.vector_angle(proj_yz, [0,0,1])
 
-		x_rotation = self.vector_angle(proj_yz, [0,0,1])
-		y_rotation = self.vector_angle(proj_yz, link_vector)
-
+		if link_vector[0]>0:
+			y_rotation = self.vector_angle(proj_yz, link_vector)
+		else:
+			y_rotation = -self.vector_angle(proj_yz, link_vector)
 		return(x_rotation, y_rotation)
 	
 	def dh_matrix(self, d, theta, alpha, r):
@@ -193,14 +205,14 @@ class question2:
 def main():
 	ic = question2()
 	#define symbols for all links
+	print(ic.plane_angles(np.array([2,0.8,2.3])))
 		
-		
 	
 	
 	
-	print(np.round(question2.sym_forward_kinametics(ds,thetas, alphas,rs),2))
+	#print(np.round(question2.sym_forward_kinametics(ds,thetas, alphas,rs),2))
 	#jacobian = grad(matrix)
-	print(ee_pos)
+	#print(ee_pos)
 		
 if __name__ == '__main__':
 	main()
