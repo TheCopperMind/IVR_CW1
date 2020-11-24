@@ -21,7 +21,9 @@ class target_detector:
 	def __init__(self):
 		rospy.init_node('target_detector', anonymous=True)
 		
-		self.robot_target_estimated_pub = rospy.Publisher("/robot/target_position_estimated/command", Float64, queue_size=10)
+		self.robot_target_xposition_estimated_pub = rospy.Publisher("/target/x_position_estimated/command", Float64, queue_size=10)
+		self.robot_target_yposition_estimated_pub = rospy.Publisher("/target/y_position_estimated/command", Float64, queue_size=10)
+		self.robot_target_zposition_estimated_pub = rospy.Publisher("/target/z_position_estimated/command", Float64, queue_size=10)
 
 		self.image_sub1 = message_filters.Subscriber("/camera1/robot/image_raw", Image)
 		self.image_sub2 = message_filters.Subscriber("/camera2/robot/image_raw", Image)
@@ -29,17 +31,27 @@ class target_detector:
 		self.ts.registerCallback(self.callback)
 
 		self.bridge = CvBridge()
+		self.lastYZPosition = np.array([0,0])
+		self.lastXZPosition = np.array([0,0])
 
 	def detect3dtarget(self, img1, img2):
-		#a1 = image1.pixel2meter(img1)
-		#a2 = image1.pixel2meter(img2)
-		#targetYZ = a1*image1.detect_target(img1)
-		#targetXZ = a2*image2.detect_target(img2)
+		a1 = image1.pixel2meter(img1)
+		a2 = image1.pixel2meter(img2)
+		targetYZ = a1*image1.detect_target(img1)
+		targetXZ = a2*image2.detect_target(img2)
+		
+		if targetYZ[0] == 0 and targetYZ[1] == 0:
+			targetYZ = self.lastYZPosition
+		else:
+			self.lastYZPosition = targetYZ
+			
+		if targetXZ[0] == 0 and targetXZ[1] == 0:
+			targetXZ = self.lastXZPosition
+		else:
+			self.lastXZPosition = targetXZ
  		
-		circle1 = image1.detect_target(img1)
-		#xyz = np.array([targetXZ[0], targetYZ[0], (targetYZ[1]+targetXZ[1])/2])
-		#return xyz
-		return circle1
+		xyz = np.array([targetXZ[0]-25, targetYZ[0]-25, ((targetYZ[1]+targetXZ[1])/2)-16])
+		return xyz
 
 	def callback(self, data1, data2):
 		try:
@@ -55,7 +67,9 @@ class target_detector:
 		print(targetData)
 
 		try:
-				self.robot_target_estimated_pub.publish(self.target.data[0])
+				self.robot_target_xposition_estimated_pub.publish(self.target.data[0])
+				self.robot_target_yposition_estimated_pub.publish(self.target.data[1])
+				self.robot_target_zposition_estimated_pub.publish(self.target.data[2])
 			
 		except CvBridgeError as e:
 			print(e)
