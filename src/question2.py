@@ -202,10 +202,10 @@ class question2:
 		print(proj_yz)
 		#positive x rotation
 		if link_vector[1]<0:
-			x_rotation = self.vector_angle(proj_yz, [0,0,1])
+			x_rotation = self.vector_angle(proj_yz, [0,0,-1])
 		#negative x rotation
 		else:
-			x_rotation = -self.vector_angle(proj_yz, [0,0,1])
+			x_rotation = -self.vector_angle(proj_yz, [0,0,-1])
 
 		if link_vector[0]>0:
 			y_rotation = self.vector_angle(proj_yz, link_vector)

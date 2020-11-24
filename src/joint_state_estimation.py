@@ -101,6 +101,7 @@ class angle_estimator:
 		vectBG = green - blue
 		vectGR = red - green
 		
+		print(vectBG)
 		joint2and3 = self.plane_angles(vectBG)
 		
 		angles = self.plane_angles(vectBG)
