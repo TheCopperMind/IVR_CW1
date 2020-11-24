@@ -83,25 +83,14 @@ def detect_target(image):
     mask[thresh == 0] = 255
     mask = cv2.bitwise_not(thresh)
     
-    cv2.imshow("Name",mask)
-    cv2.waitKey(0)
-   
-    # Apply Hough transform on the blurred image. 
-    detected_circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT,1, 20, param1 = 50, param2 = 30, minRadius = 1, maxRadius = 40) 
-  
-    # Draw circles that are detected. 
-    if detected_circles is not None: 
-  
-        # Convert the circle parameters a, b and r to integers. 
-        detected_circles = np.uint16(np.around(detected_circles)) 
-  
-        for pt in detected_circles[0, :]: 
-            a, b, r = pt[0], pt[1], pt[2] 
-     
-        return detected_circles[0] 
+    contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if(len(contours)>=2):
+    	c = max(contours,key=len)
+    	(x,y),r = cv2.minEnclosingCircle(c)
+    	return np.array([x,y])
     else:
-        return [0,0]
-
+    	return ([0,0])
 
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):
