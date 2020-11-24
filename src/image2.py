@@ -75,8 +75,6 @@ def detect_yellow(image):
 def detect_target(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, (10,100,20), (25,255,255))
-    kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.dilate(mask, kernel, iterations=3)
     
     ret,thresh = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
     mask[thresh == 0] = 255
@@ -86,11 +84,23 @@ def detect_target(image):
     
     c = max(contours,key=len)
     approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
-    if(len(approx))>2:
+    if(len(approx))>4:
     	(x,y),r = cv2.minEnclosingCircle(c)
     	return np.array([x,y])
     else:
     	return ([0,0])
+    	
+def detect_black(image):
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
+    
+    ret,thresh = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
+    mask[thresh == 0] = 255
+    mask = cv2.bitwise_not(thresh)
+    
+    circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp = 1.0, minDist = 1, maxRadius = 10, param1 = 100, param2 = 10)
+
+    return circles
     	
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):
