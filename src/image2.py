@@ -84,8 +84,9 @@ def detect_target(image):
     
     contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    if(len(contours)>=2):
-    	c = max(contours,key=len)
+    c = max(contours,key=len)
+    approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
+    if(len(approx))>2:
     	(x,y),r = cv2.minEnclosingCircle(c)
     	return np.array([x,y])
     else:

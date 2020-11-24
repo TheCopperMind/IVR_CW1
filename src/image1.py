@@ -85,12 +85,19 @@ def detect_target(image):
     
     contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    if(len(contours)>=2):
-    	c = max(contours,key=len)
+    c = max(contours,key=len)
+    approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
+    if(len(approx))>2:
     	(x,y),r = cv2.minEnclosingCircle(c)
     	return np.array([x,y])
     else:
     	return ([0,0])
+    	
+def detect_black(image):
+    mask = cv2.inRange(image,(0,0,0),(180,255,50))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
+    return mask
 
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):

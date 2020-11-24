@@ -50,7 +50,7 @@ class target_detector:
 		else:
 			self.lastXZPosition = targetXZ
  		
-		xyz = np.array([targetXZ[0]-25, targetYZ[0]-30, ((targetYZ[1]+targetXZ[1])/2)-16])
+		xyz = np.array([targetXZ[0]-25, targetYZ[0]-25, ((targetYZ[1]+targetXZ[1])/2)-16])
 		return xyz
 
 	def callback(self, data1, data2):
