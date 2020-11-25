@@ -36,15 +36,21 @@ class angle_estimator:
 		circles1 = image1.detect_black(img1)
 		circles2 = image2.detect_black(img2)
 		
-		circles1Coords = []
-		for circle in circles1[0,:]:
-			circles1Coords.append(np.array([circle[0],circle[1]]))
-			
-		circles2Coords = []
-		for circle in circles2[0,:]:
-			circles2Coords.append(np.array([circle[0],circle[1]]))
+		a1 = image1.pixel2meter2(circles1[0],circles1[1])
+		a2 = image2.pixel2meter2(circles2[0],circles2[1])
+		
+		circles1 = a1*circles1
+		circles2 = a1*circles2
+		
+		bluePos = np.array([circles2[0][0],circles1[0][0],(circles1[0][1]+circles2[0][1])/2])
+		
+		greenPos = np.array([circles2[1][0],circles1[1][0],(circles1[1][1]+circles2[1][1])/2])
+		
+		redPos = np.array([circles2[2][0],circles1[2][0],(circles1[2][1]+circles2[2][1])/2])
+		
+		jointPositions = np.array([bluePos,greenPos,redPos])
 	
-		return circles2Coords
+		return jointPositions
 		
 	def callback(self, data1, data2):
 		try:
@@ -53,8 +59,8 @@ class angle_estimator:
 		except CvBridgeError as e:
 			print(e)
 			
-		circles2Coords = self.detect_circles(self.cv_image1, self.cv_image2)
-		print(circles2Coords[2])
+		bluePos = self.detect_circles(self.cv_image1,self.cv_image2)
+		print(bluePos)
 		
 # call the class
 def main(args):
