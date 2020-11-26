@@ -89,7 +89,7 @@ def detect_target(image):
     	(x,y),r = cv2.minEnclosingCircle(c)
     	return np.array([x,y])
     else:
-    	return ([0,0])
+    	return (np.array([0,0]))
     	
 def detect_black(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)

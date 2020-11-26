@@ -37,6 +37,8 @@ class target_detector:
 	def detect3dtarget(self, img1, img2):
 		a1 = image1.pixel2meter(img1)
 		a2 = image1.pixel2meter(img2)
+		print(image1.detect_target(img1))
+		print(image2.detect_target(img2))
 		targetYZ = a1*image1.detect_target(img1)
 		targetXZ = a2*image2.detect_target(img2)
 		
@@ -50,7 +52,7 @@ class target_detector:
 		else:
 			self.lastXZPosition = targetXZ
  		
-		xyz = np.array([targetXZ[0]-25, targetYZ[0]-25, ((targetYZ[1]+targetXZ[1])/2)-16])
+		xyz = np.array([targetXZ[0]-21.5, targetYZ[0]-21, ((targetYZ[1]+targetXZ[1])/2)-14.5])
 		return xyz
 
 	def callback(self, data1, data2):
