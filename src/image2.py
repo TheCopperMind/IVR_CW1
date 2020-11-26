@@ -29,7 +29,6 @@ def detect_red(image):
     	cy = int(M['m01'] / M['m00'])
     	return np.array([cx, cy])
  
-
 # Detecting the centre of the green circle
 def detect_green(image):
     mask = cv2.inRange(image, (0, 100, 0), (0, 255, 0))
@@ -84,60 +83,114 @@ def detect_target(image):
     
     c = max(contours,key=len)
     approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
-    if(len(approx))>4:
+    if(len(approx))>5:
     	(x,y),r = cv2.minEnclosingCircle(c)
     	return np.array([x,y])
     else:
-    	return (np.array([0,0]))
+    	return np.array([0,0])
     	
-def detect_black(image):
+def detect_square(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (0,0,0), (180,255,50))
+    mask = cv2.inRange(hsv, (10,100,20), (25,255,255))
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.dilate(mask, kernel, iterations=3)
     
     ret,thresh = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
     mask[thresh == 0] = 255
     mask = cv2.bitwise_not(thresh)
     
-    circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp = 1.0, minDist = 1.0, maxRadius = 20, param1 = 100, param2 = 10)
+    contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    circleCoords = []
-    for circle in circles[0,:]:
-    	circleCoords.append([circle[0], circle[1]])
-    
-    bluePos = getBlueJoint(circleCoords)
-    circleCoords.remove(bluePos)
-    circle2 = np.array(circleCoords[0])
-    circle3 = np.array(circleCoords[1])
-    circle2distance = distance(circle2,bluePos)
-    circle3distance = distance(circle3,bluePos)
-    
-    if circle2distance < circle3distance:
-    	greenPos = circle2
-    	redPos = circle3
+    for c in contours:
+    	approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
+    	if(len(approx))<=4:
+    		(x,y),r = cv2.minEnclosingCircle(c)
+    	return np.array([x,y])
     else:
-    	greenPos = circle3
-    	redPos = circle2
+    	return np.array([0,0])
     	
-    circles = np.array([bluePos,greenPos,redPos])
+#maybe change this?    	
+def calculateDistance(circle1,circle2):
+    return np.sqrt((circle1-circle2).dot(circle1-circle2))
+           
+def findYellow(circles):
+    distance = 1000
+    closestCircleIndex = 0
+    yellowPos = np.array([399,529])
     
-    return circles
+    i = 0
+    for circle in circles[0,:]:
+    	center = np.array([circle[0],circle[1]])
+    	if calculateDistance(center,yellowPos) < distance:
+    		distance = calculateDistance(center,yellowPos)
+    		closestCircleIndex = i
+    	i+=1
+    		
+    return closestCircleIndex
     
-def getBlueJoint(circleCoords):
-    z = 1000
-    closest = []
-    for circle in circleCoords:
-    	if circle[1] < z:
-           z = circle[1]
-           closest = circle
+def findBlue(circles,yellowCircleIndex):
+    distance = 1000
+    closestCircleIndex = 0
+    bluePos = np.array([399,472])
     
-    return closest
+    i = 0
+    for circle in circles[0,:]:
+    	center = np.array([circle[0],circle[1]])
+    	if calculateDistance(center,bluePos) < distance and i != yellowCircleIndex:
+    		distance = calculateDistance(center,bluePos)
+    		closestCircleIndex = i
+    	i+=1
+    		
+    return closestCircleIndex
+   	
+def detect_black_circles(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 15, 255, cv2.THRESH_BINARY_INV)
     
-def distance(circle1, circle2):
-    return np.linalg.norm(circle1-circle2)
+    ret,thresh2 = cv2.threshold(thresh,0,255,cv2.THRESH_BINARY)
+    thresh[thresh2 == 0] = 255
+    thresh = cv2.bitwise_not(thresh2)
     
+    canny = cv2.Canny(thresh,200,300)
+
+    circles = cv2.HoughCircles(image=canny,method=cv2.HOUGH_GRADIENT, dp=0.8, minDist=30, param1=40, param2=10, minRadius=0, maxRadius=15)
+    circles = np.int16(np.around(circles))
+
+    if len(circles[0]) == 4:
+        yellowIndex = findYellow(circles)
+        yellowPos = np.array([circles[0,yellowIndex,0],circles[0,yellowIndex,1]])
+        blueIndex = findBlue(circles,yellowIndex)
+        bluePos = np.array([circles[0,blueIndex,0],circles[0,blueIndex,1]])
+  	
+        distance = 1000
+        closestCircleIndex = 0
+  	
+        i = 0
+        for circle in circles[0,:]:
+            center = np.array([circle[0],circle[1]])
+            if calculateDistance(center,bluePos) < distance and i!=yellowIndex and i!=blueIndex:
+                distance = calculateDistance(center,bluePos)
+                closestCircleIndex = i
+            i+=1
+    		
+        greenIndex = closestCircleIndex
+        greenPos = np.array([circles[0,closestCircleIndex,0],circles[0,closestCircleIndex,1]])
+        
+        indexes = np.array([0,1,2,3])
+        for index in indexes:
+            if index!=blueIndex and index!=yellowIndex and index!=greenIndex:
+                redIndex = index
+	
+        redPos = np.array([circles[0,redIndex,0],circles[0,redIndex,1]])
+    	
+        circlesList = np.array([yellowPos,bluePos,greenPos,redPos])
+        return circlesList
+    else:
+        return np.array([0,0])
+        
 def pixel2meter2(circle1,circle2):
-   dist = np.sum((circle1 - circle2)**2)
-   return 3.5/(np.sqrt(dist))
+    dist = np.sum((circle1 - circle2)**2)
+    return 2.5 / np.sqrt(dist)
     	
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):
