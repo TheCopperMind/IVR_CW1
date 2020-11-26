@@ -33,6 +33,12 @@ class angle_estimator:
 		self.robot_joint3_pub = rospy.Publisher("/robot/joint3_position_controller/command", Float64, queue_size=10)
 		self.robot_joint4_pub = rospy.Publisher("/robot/joint4_position_controller/command", Float64, queue_size=10)
 		
+		
+		self.ee_pos_x = rospy.Publisher("/robot/ee_x/command", Float64, queue_size=10)
+		self.ee_pos_y = rospy.Publisher("/robot/ee_y/command", Float64, queue_size=10)
+		self.ee_pos_z = rospy.Publisher("/robot/ee_z/command", Float64, queue_size=10)
+
+		
 		self.image_sub1 = message_filters.Subscriber("/camera1/robot/image_raw", Image)
 		self.image_sub2 = message_filters.Subscriber("/camera2/robot/image_raw", Image)
 		self.ts = message_filters.ApproximateTimeSynchronizer([self.image_sub1, self.image_sub2], 10, 1, allow_headerless=True)
@@ -54,10 +60,12 @@ class angle_estimator:
 		self.targetXpos = 0 
 		self.targetYpos = 0 
 		self.targetZpos = 0 
-		self.target_subx = rospy.Subscriber("/target/x_position_controller/command", Float64, callback = self.targetxcallback)
-		self.target_suby = rospy.Subscriber("/target/y_position_controller/command", Float64, callback = self.targetycallback)
-		self.target_subz = rospy.Subscriber("/target/z_position_controller/command", Float64, callback = self.targetzcallback)
-
+		self.joint2 = message_filters.Subscriber("/robot/joint2_position_controller/command", Float64)
+		self.joint3 = message_filters.Subscriber("/robot/joint3_position_controller/command", Float64)
+		self.joint4 = message_filters.Subscriber("/robot/joint4_position_controller/command", Float64)
+		self.jointmf = message_filters.ApproximateTimeSynchronizer([self.joint2, self.joint3, self.joint4], 10, 1, allow_headerless=True)
+		self.jointmf.registerCallback(self.jointscallback)
+		self.actualJoints = np.array([0,0,0,0])
 
 	def detect3dyellow(self, img1, img2):
 		a1 = image1.pixel2meter(img1)
@@ -104,16 +112,7 @@ class angle_estimator:
 		return xyz
 
 
-	def dh_matrix(self, d, theta, alpha, r):
-		return(np.array([   [np.cos(theta)  , -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha)     , r*np.cos(theta)],
-							[np.sin(theta)  , np.cos(theta)*np.cos(alpha) , -np.cos(theta)*np.sin(alpha)    , r*np.sin(theta)],
-							[0	            , np.sin(alpha)               ,  np.cos(alpha)                  , d],
-							[0              , 0                           , 0                               , 1]]))
-	def dh_matrix_sym(self, d, theta, alpha, r):
-		return(Matrix([     [cos(theta)  , -sin(theta)*cos(alpha), sin(theta)*sin(alpha)     , r*cos(theta)],
-							[sin(theta)  , cos(theta)*cos(alpha) , -cos(theta)*sin(alpha) , r*sin(theta)],
-							[0	         , sin(alpha)               ,cos(alpha)                 ,d],
-							[0           , 0                        , 0                         ,1]]))
+	
 							
 	def projection(self, link_vector, normal_vector):
 		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
@@ -151,6 +150,26 @@ class angle_estimator:
 			y_rotation = -self.vector_angle(proj_yz, link_vector)
 		return(x_rotation, y_rotation)
 		
+	def detect3dtarget(self, img1, img2):
+		a1 = image1.pixel2meter(img1)
+		a2 = image1.pixel2meter(img2)
+		targetYZ = a1*image1.detect_target(img1)
+		targetXZ = a2*image2.detect_target(img2)
+		
+		if targetYZ[0] == 0 and targetYZ[1] == 0:
+			targetYZ = self.lastYZPosition
+		else:
+			self.lastYZPosition = targetYZ
+			
+		if targetXZ[0] == 0 and targetXZ[1] == 0:
+			targetXZ = self.lastXZPosition
+		else:
+			self.lastXZPosition = targetXZ
+ 		
+		xyz = np.array([targetXZ[0], targetYZ[0], ((targetYZ[1]+targetXZ[1])/2)])
+		return xyz
+		
+		
 	def jointangles(self, img1, img2):
 		yellow = self.detect3dyellow(img1, img2)
 		blue = self.detect3dblue(img1, img2)
@@ -165,12 +184,24 @@ class angle_estimator:
 		
 		joint_4 = self.vector_angle(vectBG, vectGR)
 		#print(joint_4)
-		if(vectGR[1]> 0):
-			joint_4 = -joint_4
+		#if(vectGR[1]> 0):
+			#joint_4 = -joint_4
 		
 
 		return np.array([0, joint2and3[0], joint2and3[1], joint_4])
 
+
+	def dh_matrix(self, d, theta, alpha, r):
+		return(np.array([   [np.cos(theta)  , -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha)     , r*np.cos(theta)],
+							[np.sin(theta)  , np.cos(theta)*np.cos(alpha) , -np.cos(theta)*np.sin(alpha)    , r*np.sin(theta)],
+							[0	            , np.sin(alpha)               ,  np.cos(alpha)                  , d],
+							[0              , 0                           , 0                               , 1]]))
+	def dh_matrix_sym(self, d, theta, alpha, r):
+		return(Matrix([     [cos(theta)  , -sin(theta)*cos(alpha), sin(theta)*sin(alpha)     , r*cos(theta)],
+							[sin(theta)  , cos(theta)*cos(alpha) , -cos(theta)*sin(alpha) , r*sin(theta)],
+							[0	         , sin(alpha)               ,cos(alpha)                 ,d],
+							[0           , 0                        , 0                         ,1]]))
+							
 	def sym_forward_kinametics(self, ds, thetas, alphas, rs):
 		theta0, theta1, theta2, theta3, r0, r1, r2, r3, alpha0, alpha1, alpha2, alpha3, d0, d1, d2, d3 = symbols('theta0 theta1 theta2 theta3 r0 r1 r2 r3 alpha0 alpha1 alpha2 alpha3 d0 d1 d2 d3')
 		matrix0 = (self.dh_matrix_sym(d0, theta0, alpha0, r0))
@@ -238,24 +269,7 @@ class angle_estimator:
 		ee_pos = (np.array(numMatrix).astype(np.float64))[:,3][:3]
 		return ee_pos, numMatrix, jac
 
-	def detect3dtarget(self, img1, img2):
-		a1 = image1.pixel2meter(img1)
-		a2 = image1.pixel2meter(img2)
-		targetYZ = a1*image1.detect_target(img1)
-		targetXZ = a2*image2.detect_target(img2)
-		
-		if targetYZ[0] == 0 and targetYZ[1] == 0:
-			targetYZ = self.lastYZPosition
-		else:
-			self.lastYZPosition = targetYZ
-			
-		if targetXZ[0] == 0 and targetXZ[1] == 0:
-			targetXZ = self.lastXZPosition
-		else:
-			self.lastXZPosition = targetXZ
- 		
-		xyz = np.array([targetXZ[0]-25, targetYZ[0]-25, ((targetYZ[1]+targetXZ[1])/2)-16])
-		return xyz
+	
 		
 	def control_closed(self,jas, img1, img2):
 		ds = [2.5, 0, 0,0]
@@ -264,10 +278,13 @@ class angle_estimator:
 		alphas = np.deg2rad([-90,-90,-90,0])
 		
 		
+
+		
 		# P gain
-		K_p = np.array([[0.5,0,0],[0,0.5,0], [0,0,0.5]])
+		K_p = np.array([[1.6,0,0],[0,1.6,0], [0,0,1.6]])
 		# D gain
-		K_d = np.array([[0,0,0],[0,0,0],[0,0,0]])
+		K_d = np.array([[0.4,0,0],[0,0.4,0],[0,0,0.4]])
+		
 		# estimate time step
 		cur_time = np.array([rospy.get_time()])
 		dt = cur_time - self.time_previous_step
@@ -276,45 +293,51 @@ class angle_estimator:
 		pos, numMatrix, jacobian = self.end_effector_estimate(jas)
 		newOrig = self.detect3dyellow(self.cv_image1, self.cv_image2)
 		
-		pos = [pos[0], pos[1], -pos[2]]
-		pos = pos
+		pos = np.array([pos[0], pos[1], -pos[2]])
+		pos = pos + newOrig
 		# THIS NEEDS TO BE SPHERE POSITION
 		
 		pos_d= self.detect3dtarget(img1, img2) #np.array([self.targetXpos,self.targetYpos, self.targetZpos])   #
 		
-		#print(self.detect3dtarget(img1, img2))
-		print(np.linalg.norm(self.detect3dred(img1,img2), pos))
-		#print(pos_d)
-		#print(pos)
-		#pos_d = newOrig + pos_d
-		#print(pos_d - pos)
-		
+		self.ee_pos_x.publish(pos[0])
+		self.ee_pos_y.publish(pos[1])
+		self.ee_pos_z.publish(pos[2])
+			
+		error = pos_d - pos
+		error = np.array([error[0], error[1], -error[2]])
 		# estimate derivative of error
-		self.error_d = ((pos_d - pos) - self.error)/dt
+		self.error_d = ((error) - self.error)/dt
 		# estimate error
-		self.error = pos_d-pos
+		self.error = error
 		#print(self.error)
 		q = jas
+		#print(jacobian)
 		jacobian = np.round(np.array(jacobian).astype(np.float64),6)[0:3,:]
+		jacobian[:,0] = np.array([0,0,0])
+		#print(jacobian)
+		J_inv = np.zeros((4,4))
 		#sympy.pprint(np.round(np.array(jacobian).astype(np.float64).reshape((3,4)), 6))
-		J_inv = np.linalg.pinv(jacobian)# calculating the MP psudeo inverse of Jacobian
-		#J_inv = np.array(J_inv).astype(np.float64)
+		try:
+			J_inv = np.round(np.linalg.pinv(jacobian),6)# calculating the MP psudeo inverse of Jacobian
+		
+		except np.linalg.LinAlgError as e:
+			J_inv = np.random.rand(4,3)
 		#print(J_inv)
 		dq_d =np.dot(J_inv, ( np.dot(K_d,self.error_d.transpose()) + np.dot(K_p,self.error.transpose()) ) )  # control input (angular velocity of joints)
+		for i in range(len(dq_d)):
+			if dq_d[i] > 1:
+				dq_d[i] = 1
+			if dq_d[i] < -1:
+				dq_d[i] = -1
 		q_d = q + (dt * dq_d)  # control input (angular position of joints)
-		#print(dt * dq_d)
+		
+		#print(q_d)
 		return q_d
 	
 	
-	def targetxcallback(self, data1):
-		self.targetXpos = (data1.data)
-	def targetycallback(self, data1):
-		self.targetYpos = (data1.data)
-		#print(self.targetYpos)
-	def targetzcallback(self, data1):
-		self.targetZpos = (data1.data)
-		#print(self.targetZpos)
-		#if (self.blue == np.array([0
+		
+	def jointscallback(self, data1, data2, data3):
+		self.actualJoints = np.array([0, data1.data, data2.data, data3.data])
 			
 	def callback(self, data1, data2):
 		try:
@@ -327,39 +350,50 @@ class angle_estimator:
 		if (self.fkmatrix == Matrix([0])):
 			self.fkmatrix,self.fkjacobian, self.symThetas = self.make_matrix()
 		jointsData = np.array([0,0,0,0])
+
 		q_d =  np.array([0,0,0,0])
 		self.joints = Float64MultiArray()
-		#if (self.oldq == np.array([0,0,0,0])).all():
-			#self.oldq = self.jointangles(self.cv_image1, self.cv_image2)
-		jas = [1,1,-1.5,1]
-		self.oldq = q_d
-		ds = [2.5, 0, 0,0]
-		thetas= np.deg2rad([-90,90,180,0]) + jas
-		rs = [0,0,3.5,3]
-		alphas = np.deg2rad([-90,-90,-90,0])
-		ee_pos, numMatrix, jacobian = self.end_effector_estimate(jas)
-		alt, jacobian = self.sym_forward_kinametics(ds, thetas, alphas,rs)
-		alt_ee = (np.array(alt).astype(np.float64))[:,3][:3]
-		newOrig = self.detect3dyellow(self.cv_image1, self.cv_image1)
-		ee_pos = [ee_pos[0], ee_pos[1], -ee_pos[2]]
-		alt_ee = [alt_ee[0], alt_ee[1], -alt_ee[2]]
-		ee_pos = newOrig + ee_pos
-		alt_ee = newOrig + alt_ee
+		
+
+			
+		q_d = self.control_closed(self.actualJoints,self.cv_image1, self.cv_image2)
+		#jas = self.jointangles(self.cv_image1, self.cv_image2)
+		#self.oldq = q_d
+		#jas = [-1,0.1,0.7,1.5]
+		#self.oldq = q_d
+		#ds = [2.5, 0, 0,0]
+		#thetas= np.deg2rad([-90,90,180,0]) + jas
+		#rs = [0,0,3.5,3]
+		#alphas = np.deg2rad([-90,-90,-90,0])
+		#ee_pos, numMatrix, jacobian = self.end_effector_estimate(jas)
+
+		#newOrig = self.detect3dyellow(self.cv_image1, self.cv_image1)
+		#ee_pos = [ee_pos[0], ee_pos[1], -ee_pos[2]]
+
+		#ee_pos = newOrig + ee_pos
+
 		try:
-			self.robot_joint1_pub.publish(jas[0])
-			self.robot_joint2_pub.publish(jas[1])
-			self.robot_joint3_pub.publish(jas[2])
-			self.robot_joint4_pub.publish(jas[3])
+			#self.robot_joint2_estimated_pub.publish(jas[1])
+			#self.robot_joint3_estimated_pub.publish(jas[2])
+			#self.robot_joint4_estimated_pub.publish(jas[3])
+			self.robot_joint1_pub.publish(0)
+			self.robot_joint2_pub.publish(q_d[1])
+			self.robot_joint3_pub.publish(q_d[2])
+			self.robot_joint4_pub.publish(q_d[3])
+			
 			
 		except CvBridgeError as e:
 			print(e)
-		print(ee_pos)
-		print(alt_ee)
-		
-		red = self.detect3dred(self.cv_image1, self.cv_image1)
-		print(newOrig)
-		print(red)
-		print(np.linalg.norm(red - ee_pos))
+		#print(ee_pos)
+
+		#target = self.detect3dtarget(self.cv_image1,self.cv_image2)
+		#target = [target[0], target[1], -target[2]]
+		#print(target)
+		#red = self.detect3dred(self.cv_image1, self.cv_image2)
+		#print(newOrig)
+		#print(red)
+		#print(np.linalg.norm(red - ee_pos))
+		#print(target - ee_pos)
 
 # call the class
 def main(args):
