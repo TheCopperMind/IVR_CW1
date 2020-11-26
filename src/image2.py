@@ -98,9 +98,46 @@ def detect_black(image):
     mask[thresh == 0] = 255
     mask = cv2.bitwise_not(thresh)
     
-    circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp = 1.0, minDist = 1, maxRadius = 10, param1 = 100, param2 = 10)
-
+    circles = cv2.HoughCircles(mask, cv2.HOUGH_GRADIENT, dp = 1.0, minDist = 1.0, maxRadius = 20, param1 = 100, param2 = 10)
+    
+    circleCoords = []
+    for circle in circles[0,:]:
+    	circleCoords.append([circle[0], circle[1]])
+    
+    bluePos = getBlueJoint(circleCoords)
+    circleCoords.remove(bluePos)
+    circle2 = np.array(circleCoords[0])
+    circle3 = np.array(circleCoords[1])
+    circle2distance = distance(circle2,bluePos)
+    circle3distance = distance(circle3,bluePos)
+    
+    if circle2distance < circle3distance:
+    	greenPos = circle2
+    	redPos = circle3
+    else:
+    	greenPos = circle3
+    	redPos = circle2
+    	
+    circles = np.array([bluePos,greenPos,redPos])
+    
     return circles
+    
+def getBlueJoint(circleCoords):
+    z = 1000
+    closest = []
+    for circle in circleCoords:
+    	if circle[1] < z:
+           z = circle[1]
+           closest = circle
+    
+    return closest
+    
+def distance(circle1, circle2):
+    return np.linalg.norm(circle1-circle2)
+    
+def pixel2meter2(circle1,circle2):
+   dist = np.sum((circle1 - circle2)**2)
+   return 3.5/(np.sqrt(dist))
     	
 # Calculate the conversion from pixel to meter
 def pixel2meter(image):
