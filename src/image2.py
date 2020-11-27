@@ -101,7 +101,7 @@ def findYellow(circles):
     	center = np.array([circle[0],circle[1]])
     	newDistance = np.linalg.norm(center-yellowPos)
     	if newDistance < distance:
-    		distance = calculateDistance(center,yellowPos)
+    		distance = np.linalg.norm(center-yellowPos)
     		closestCircleIndex = i
     	i+=1
     		
@@ -117,7 +117,7 @@ def findBlue(circles,yellowCircleIndex):
     	center = np.array([circle[0],circle[1]])
     	newDistance = np.linalg.norm(center-bluePos)
     	if newDistance < distance and i != yellowCircleIndex:
-    		distance = calculateDistance(center,bluePos)
+    		distance = np.linalg.norm(center-bluePos)
     		closestCircleIndex = i
     	i+=1
     		
@@ -150,7 +150,7 @@ def detect_black_circles(image):
             center = np.array([circle[0],circle[1]])
             newDistance = np.linalg.norm(center-bluePos)
             if newDistance < distance and i!=yellowIndex and i!=blueIndex:
-                distance = calculateDistance(center,bluePos)
+                distance = np.linalg.norm(center-bluePos)
                 closestCircleIndex = i
             i+=1
     		
