@@ -1,6 +1,6 @@
 # IVR_CW1
 
-For 4.3, run the black_joint_state_estimation.py
+For 4.3, run the black_joint_state_estimation.py file
 
 The estimated joint angles are then published to the following topics:
 
