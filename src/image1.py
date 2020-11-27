@@ -91,7 +91,7 @@ def detect_target(image):
 def findYellow(circles):
     distance = 1000
     closestCircleIndex = 0
-    yellowPos = np.array([399,529])
+    yellowPos = np.array([400,530])
     
     i = 0
     for circle in circles[0,:]:
@@ -107,7 +107,7 @@ def findYellow(circles):
 def findBlue(circles,yellowCircleIndex):
     distance = 1000
     closestCircleIndex = 0
-    bluePos = np.array([399,472])
+    bluePos = np.array([400,470])
     
     i = 0
     for circle in circles[0,:]:
