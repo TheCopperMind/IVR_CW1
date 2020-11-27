@@ -40,13 +40,22 @@ class angle_estimator:
 		self.lastBlueXZ = np.array([0,0])
 		self.lastGreenXZ = np.array([0,0])
 		self.lastRedXZ = np.array([0,0])
+		self.lasta1 = 0
+		self.lasta2 = 0
 		
 	def detect_circles(self, img1, img2):
 		circles1 = image1.detect_black_circles(img1)
 		circles2 = image2.detect_black_circles(img2)
 		
-		a1 = image1.pixel2meter2(circles1[0],circles1[1])
-		a2 = image2.pixel2meter2(circles2[0],circles2[1])
+		if (circles1 == np.array([0,0])).any():
+			a1 = self.lasta1
+			a2 = self.lasta2		
+		
+		else:
+			a1 = image1.pixel2meter2(circles1[0],circles1[1])
+			a2 = image2.pixel2meter2(circles2[0],circles2[1])
+			self.lasta1 = a1
+			self.lasta2 = a2
 		
 		if (circles1 == np.array([0,0])).any():
 			yellowYZ = self.lastYellowYZ

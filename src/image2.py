@@ -10,8 +10,6 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float64MultiArray, Float64
 from cv_bridge import CvBridge, CvBridgeError
 
-#fix problem when m00 = 0, maybe in other file?
-
 # In this method you can focus on detecting the centre of the red circle
 def detect_red(image):
     # Isolate the blue colour in the image as a binary image
@@ -79,7 +77,7 @@ def detect_target(image):
     mask[thresh == 0] = 255
     mask = cv2.bitwise_not(thresh)
     
-    contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, h = cv2.findContours(canny,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     c = max(contours,key=len)
     approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
@@ -88,30 +86,10 @@ def detect_target(image):
     	return np.array([x,y])
     else:
     	return np.array([0,0])
-    	
-def detect_square(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, (10,100,20), (25,255,255))
-    kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.dilate(mask, kernel, iterations=3)
-    
-    ret,thresh = cv2.threshold(mask,0,255,cv2.THRESH_BINARY)
-    mask[thresh == 0] = 255
-    mask = cv2.bitwise_not(thresh)
-    
-    contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
-    for c in contours:
-    	approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
-    	if(len(approx))<=4:
-    		(x,y),r = cv2.minEnclosingCircle(c)
-    	return np.array([x,y])
-    else:
-    	return np.array([0,0])
-    	
-#maybe change this?    	
+    	  	
 def calculateDistance(circle1,circle2):
-    return np.sqrt((circle1-circle2).dot(circle1-circle2))
+    dist = np.linalg.norm(circle1-circle2)
+    return dist
            
 def findYellow(circles):
     distance = 1000

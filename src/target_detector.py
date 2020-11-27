@@ -37,8 +37,6 @@ class target_detector:
 	def detect3dtarget(self, img1, img2):
 		a1 = image1.pixel2meter(img1)
 		a2 = image1.pixel2meter(img2)
-		print(image1.detect_target(img1))
-		print(image2.detect_target(img2))
 		targetYZ = a1*image1.detect_target(img1)
 		targetXZ = a2*image2.detect_target(img2)
 		
@@ -52,7 +50,7 @@ class target_detector:
 		else:
 			self.lastXZPosition = targetXZ
  		
-		xyz = np.array([targetXZ[0]-21.5, targetYZ[0]-21, ((targetYZ[1]+targetXZ[1])/2)-14.5])
+		xyz = np.array([targetXZ[0], targetYZ[0], ((targetYZ[1]+targetXZ[1])/2)])
 		return xyz
 
 	def callback(self, data1, data2):
@@ -65,8 +63,6 @@ class target_detector:
 		self.target = Float64MultiArray()
 		targetData = self.detect3dtarget(self.cv_image1, self.cv_image2)
 		self.target.data = targetData
-
-		print(targetData)
 
 		try:
 				self.robot_target_xposition_estimated_pub.publish(self.target.data[0])
