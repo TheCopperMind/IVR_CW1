@@ -78,7 +78,7 @@ def detect_target(image):
     mask[thresh == 0] = 255
     mask = cv2.bitwise_not(thresh)
     
-    contours, h = cv2.findContours(canny,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, h = cv2.findContours(mask,cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
     c = max(contours,key=len)
     approx = cv2.approxPolyDP(c, .03*cv2.arcLength(c, True), True)
