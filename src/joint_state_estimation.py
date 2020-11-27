@@ -60,6 +60,8 @@ class angle_estimator:
 		self.targetXpos = 0 
 		self.targetYpos = 0 
 		self.targetZpos = 0 
+		self.lastYZPosition = np.array([0,0])
+		self.lastXZPosition = np.array([0,0])
 		self.joint2 = message_filters.Subscriber("/robot/joint2_position_controller/command", Float64)
 		self.joint3 = message_filters.Subscriber("/robot/joint3_position_controller/command", Float64)
 		self.joint4 = message_filters.Subscriber("/robot/joint4_position_controller/command", Float64)
@@ -110,10 +112,7 @@ class angle_estimator:
 			xyz = self.green
 		self.green = xyz
 		return xyz
-
-
-	
-							
+						
 	def projection(self, link_vector, normal_vector):
 		return(link_vector - (np.dot(link_vector, normal_vector)/np.linalg.norm(normal_vector)**2)*normal_vector)
 
@@ -357,7 +356,7 @@ class angle_estimator:
 
 			
 		q_d = self.control_closed(self.actualJoints,self.cv_image1, self.cv_image2)
-		#jas = self.jointangles(self.cv_image1, self.cv_image2)
+		jas = self.jointangles(self.cv_image1, self.cv_image2)
 		#self.oldq = q_d
 		#jas = [-1,0.1,0.7,1.5]
 		#self.oldq = q_d
@@ -373,14 +372,13 @@ class angle_estimator:
 		#ee_pos = newOrig + ee_pos
 
 		try:
-			#self.robot_joint2_estimated_pub.publish(jas[1])
-			#self.robot_joint3_estimated_pub.publish(jas[2])
-			#self.robot_joint4_estimated_pub.publish(jas[3])
-			self.robot_joint1_pub.publish(0)
-			self.robot_joint2_pub.publish(q_d[1])
-			self.robot_joint3_pub.publish(q_d[2])
-			self.robot_joint4_pub.publish(q_d[3])
-			
+			self.robot_joint2_estimated_pub.publish(jas[1])
+			self.robot_joint3_estimated_pub.publish(jas[2])
+			self.robot_joint4_estimated_pub.publish(jas[3])
+			#self.robot_joint1_pub.publish(0)
+			#self.robot_joint2_pub.publish(q_d[1])
+			#self.robot_joint3_pub.publish(q_d[2])
+			#self.robot_joint4_pub.publish(q_d[3])
 			
 		except CvBridgeError as e:
 			print(e)
